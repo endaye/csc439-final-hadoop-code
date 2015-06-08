@@ -1,9 +1,11 @@
 package hadoop.pwdcrack;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
+
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapred.*;
@@ -17,9 +19,9 @@ import org.apache.hadoop.mapred.*;
 public class PwdCrack {
 	
 	// the Hash value
-	public static String knowHash = "8c80b057bc0b599b48cbd144558aeada";
+	public static String knowHash = "daa854b44775bc8bbcc68e7ccb50b0aa";
 	// the algorithm name
-	public static String algoName = "MD5";
+	public static String algoName = getAlgorithmName(knowHash);
 
 	
 	public static class Map extends MapReduceBase implements Mapper<LongWritable, Text, Text, IntWritable> {
@@ -35,36 +37,6 @@ public class PwdCrack {
 				one.set(1);
 				output.collect(word, one);
 			}
-//			boolean gotPwd = false;
-//			try {
-//				MessageDigest md = MessageDigest.getInstance(algoName);
-//				md.reset();
-//				md.update(password);
-//				byte[] byteStr = md.digest();
-//
-//				StringBuffer sb = new StringBuffer();
-//				for (int i = 0; i < byteStr.length; i++) {
-//					/*
-//					 * Conversion of byte [] to hex taken from
-//					 * http://www.mkyong.com/java/java-sha-hashing-example/
-//					 */
-//					sb.append(Integer.toString((byteStr[i] & 0xff) + 0x100, 16)
-//							.substring(1));
-//				}
-//				String hashString = sb.toString();
-//				// String hashString = new BigInteger(1, md.digest()).toString(16);
-//				if (hashString.equals(knownHash)) {
-//					gotPwd = true;
-//				}
-//
-//			} catch (NoSuchAlgorithmException e) {
-//				e.printStackTrace();
-//			}
-//			
-//			if (gotPwd){
-//				one.set(1);
-//				output.collect(word, one);
-//			}
 		}
 	}
 	
@@ -75,6 +47,19 @@ public class PwdCrack {
 				sum += values.next().get();
 			}
 			output.collect(key, new IntWritable(sum));
+		}
+	}
+	
+	public static String getAlgorithmName(String str) {
+		switch (str.length()){
+		case 32:
+			return "MD5";	
+		case 40: 
+			return "SHA-1";
+		case 64: 
+			return "SHA-256";
+		default:
+			throw new RuntimeException();
 		}
 	}
 	
@@ -127,6 +112,9 @@ public class PwdCrack {
 		
 		FileInputFormat.setInputPaths(conf, new Path(args[0]));
 		FileOutputFormat.setOutputPath(conf, new Path(args[1]));
+		
+		knowHash = args[2];
+		algoName = getAlgorithmName(knowHash);
 		
 		JobClient.runJob(conf);
 	}
